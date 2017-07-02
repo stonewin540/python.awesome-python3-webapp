@@ -14,6 +14,7 @@ import json
 import time
 from datetime import datetime
 from aiohttp import web
+from conf.config import configs
 
 logging.basicConfig(level=logging.INFO)
 
@@ -129,8 +130,11 @@ async def init(loop):
     add_routes(app, 'handlers')
     add_static(app)
     # app.router.add_route('GET', '/', index)
-    srv = await loop.create_server(app.make_handler(), '127.0.0.1', 9000)
-    logging.info('server started at "http://127.0.0.1:9000"...')
+
+    host = configs.session.host
+    port = configs.session.port
+    srv = await loop.create_server(app.make_handler(), host, port)
+    logging.info('server started at "http://%s:%d"...' % (host, port))
     return srv
 
 loop = asyncio.get_event_loop()

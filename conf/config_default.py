@@ -11,6 +11,8 @@ configs = {
         'database': 'awesome'
     },
     'session': {
-        'secret': 'AwEsOmE'
+        'secret': 'AwEsOmE',
+        'host': '127.0.0.1',
+        'port': 9000
     }
 }
