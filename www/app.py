@@ -1,22 +1,26 @@
 #!/usr/bin/env python
 # coding = utf-8
 
-import logging
+# !!!: 我日你大爷，这一句话折腾我一下午，就因为它写在了所有 import 的下面，就有可能导致奇怪的异常
+# 比如 import 一个自定义的模块，整个服务器无法启动了！！！
+import logging;  logging.basicConfig(level=logging.INFO)
 
 from jinja2 import Environment, FileSystemLoader
 
+from datetime import datetime
+from aiohttp import web
+
+from conf.config import configs
 from www import orm
 from www.coroweb import add_routes, add_static
+from www.handlers import cookie2user, COOKIE_NAME
+
 
 import asyncio
 import os
 import json
 import time
-from datetime import datetime
-from aiohttp import web
-from conf.config import configs
-
-logging.basicConfig(level=logging.INFO)
+import hashlib
 
 
 def index(request):
@@ -106,6 +110,20 @@ async def response_factory(app, handler):
     return response
 
 
+async def auth_factory(app, handler):
+    async def auth(request):
+        logging.info('check user: %s %s' % (request.method, request.path))
+        request.__user__ = None
+        cookie_str = request.cookies.get(COOKIE_NAME)
+        if cookie_str:
+            user = await cookie2user(cookie_str)
+            if user:
+                logging.info('set current user: %s' % user.email)
+                request.__user__ = user
+        return await handler(request)
+    return auth
+
+
 def datetime_filter(t):
     delta = int(time.time() - t)
     if delta < 60:
@@ -121,10 +139,11 @@ def datetime_filter(t):
 
 
 async def init(loop):
-    await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='www-data', password='www-data', db='awesome')
+    # await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='www-data', password='www-data', db='awesome')
+    await orm.create_pool(loop=loop, **configs.db)
 
     app = web.Application(loop=loop, middlewares=[
-        logger_factory, response_factory
+        logger_factory, response_factory, auth_factory
     ])
     init_jinja2(app, filters=dict(datetime=datetime_filter))
     add_routes(app, 'handlers')
