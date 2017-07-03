@@ -166,6 +166,14 @@ def signout(request):
     return r
 
 
+@get('/manage/blogs')
+def mange_blogs(*, page='1'):
+    return {
+        '__template__': 'manage_blogs.html',
+        'page_index': get_page_index(page)
+    }
+
+
 @get('/manage/blogs/create')
 def manage_create_blog():
     return {
@@ -185,6 +193,18 @@ async def api_get_users():
     for u in users:
         u.passwd = '******'
     return dict(users=users)
+
+
+@get('/api/blogs')
+async def api_blogs(*, page='1'):
+    page_index = get_page_index(page)
+    num = await Blog.findNumber('count(id)')
+    p = Page(num, page_index)
+    if 0 == num:
+        return dict(page=p, blogs=())
+
+    blogs = await Blog.findAll(orderBy='created_at', limit=(p.offset, p.limit))
+    return dict(page=p, blogs=blogs)
 
 
 @get('/api/blogs/{id}')
